@@ -2,7 +2,13 @@ import random
 import Player
 import hashlib
 
+
 class TicTacToe:
+
+    player1 = None
+    player2 = None
+    current_player = None
+
     def __init__(self, player1, player2):
         """
         初始化游戏
@@ -17,6 +23,18 @@ class TicTacToe:
             [" ", " ", " "]
         ]
         self.current_player = random.choice([player1, player2])  # 随机选择先手玩家
+        self.winner = None  # 胜利者（初始为 None）
+        self.game_over = False  # 游戏是否结束
+        self.player1 = player1
+        self.player2 = player2
+
+    def re_play_game(self):
+        self.board = [
+            [" ", " ", " "],
+            [" ", " ", " "],
+            [" ", " ", " "]
+        ]
+        self.current_player = random.choice([self.player1, self.player2])  # 随机选择先手玩家
         self.winner = None  # 胜利者（初始为 None）
         self.game_over = False  # 游戏是否结束
 
@@ -57,7 +75,7 @@ class TicTacToe:
 
         # 切换玩家
         if not self.game_over:
-            self.current_player = player2 if self.current_player == player1 else player1
+            self.current_player = self.player2 if self.current_player == self.player1 else self.player1
 
         return True
 
@@ -128,11 +146,15 @@ class TicTacToe:
         for row in self.board:
             print(" | ".join(row))
             print("---------")
-    
+
     def get_table_hash(self):
+        '''
+        将棋盘状态变为唯一hash值，便于存储比对
+        '''
         flatten = ''.join(''.join(row) for row in self.board)
         hash_value = hashlib.md5(flatten.encode()).hexdigest()
         return hash_value
+
 
 # 示例用法
 if __name__ == "__main__":
