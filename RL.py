@@ -24,15 +24,15 @@ def load_q_table(file_path="q_table1.pkl"):
             return {}
 
 
-def Rl(times):
-    debug = False
+def Rl(times,debug_mode=False):
+    debug = debug_mode
 
     start_time = time.time()
 
     player1 = Player("pyf", "X",0.1,0.1)  # 棋子只能为O或X  epsilon是随即决策概率，即探索率；value_rate是学习率，为0则不学了
     player1.set_q_table(load_q_table("q_table1.pkl"))
 
-    player2 = Player("wmm", "O",0.1,0.1)
+    player2 = Player("wmm", "O",1,0)
     player2.set_q_table(load_q_table("q_table2.pkl"))
 
     game = TicTacToe(player1, player2)
@@ -43,6 +43,8 @@ def Rl(times):
 
     for i in range(times):
 
+        if debug:
+            print("对局开始=============================================================")
         while True:
             # 当前player
             step_player = game.get_current_player()
@@ -60,12 +62,16 @@ def Rl(times):
 
         winner = game.get_winner()
         if winner != None:
-            player1.count_state_list(winner.name == player1.name)
-            player2.count_state_list(winner.name == player2.name)
+            if debug:
+                print("赢家为" + winner.name)
+            player1.count_state_list(winner.name == player1.name, player2.chess)
+            player2.count_state_list(winner.name == player2.name, player1.chess)
             game_res[winner.name] += 1
         else:
-            player1.count_state_list(False)
-            player2.count_state_list(False)
+            if debug:
+                print("平局")
+            player1.count_state_list(False, player2.chess)
+            player2.count_state_list(False, player1.chess)
             game_res["平局"] += 1
         player1.reset_state_list()
         player2.reset_state_list()

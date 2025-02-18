@@ -2,6 +2,41 @@ import hashlib
 import random
 
 
+def find_win_move(board, chess):
+    # 检查每一行
+    for i in range(3):
+        row = board[i]
+        if row.count(chess) == 2 and row.count(" ") == 1:
+            empty_col = row.index(" ")
+            return (i, empty_col)
+
+    # 检查每一列
+    for j in range(3):
+        column = [board[0][j], board[1][j], board[2][j]]
+        if column.count(chess) == 2 and column.count(" ") == 1:
+            empty_row = [i for i in range(3) if board[i][j] == " "][0]
+            return (empty_row, j)
+
+    # 检查主对角线 (0,0), (1,1), (2,2)
+    diag = [board[0][0], board[1][1], board[2][2]]
+    if diag.count(chess) == 2 and diag.count(" ") == 1:
+        empty_index = diag.index(" ")
+        return (empty_index, empty_index)
+
+    # 检查副对角线 (0,2), (1,1), (2,0)
+    anti_diag = [board[0][2], board[1][1], board[2][0]]
+    if anti_diag.count(chess) == 2 and anti_diag.count(" ") == 1:
+        empty_index = anti_diag.index(" ")
+        if empty_index == 0:
+            return (0, 2)
+        elif empty_index == 1:
+            return (1, 1)
+        else:
+            return (2, 0)
+
+    # 如果没有找到获胜位置
+    return None
+
 def board_to_hash(board):
     flatten = ''.join(''.join(row) for row in board)
     hash_value = hashlib.md5(flatten.encode()).hexdigest()
@@ -118,9 +153,12 @@ class Player:
         self.chess_dict = q_table
 
     # 计算学习棋局行动价值
-    def count_state_list(self, is_win):
+    def count_state_list(self, is_win, the_other_chess):
         if self.value_rate != 0:
+            step = 0
             for i in range(len(self.state_list)):
+                step += 1
+
                 hash_board = board_to_hash(self.state_list[i]["board"])
                 if hash_board not in self.chess_dict:
                     self.chess_dict[hash_board] = {(0, 0): 0, (0, 1): 0, (0, 2): 0, (1, 0): 0, (1, 1): 0, (1, 2): 0,
@@ -136,9 +174,21 @@ class Player:
                 if is_good_operate_three:
                     self.chess_dict[hash_board][self.state_list[i]["operate"]] += 1 * self.value_rate
 
+                # 判断是否有能直接赢的步没有下，没下则扣分
+                position = find_win_move(self.state_list[i]["board"], self.chess)
+                if position is not None and self.state_list[i]["operate"] != position:
+                    self.chess_dict[hash_board][self.state_list[i]["operate"]] -= 2 * self.value_rate
+                    self.chess_dict[hash_board][position] += 1.5 * self.value_rate
+                else:
+                    # 如果对面下一步能赢，没有堵住对面，也扣分
+                    position_other = find_win_move(self.state_list[i]["board"], the_other_chess)
+                    if position_other is not None and self.state_list[i]["operate"] != position_other:
+                        self.chess_dict[hash_board][self.state_list[i]["operate"]] -= 2 * self.value_rate
+                        self.chess_dict[hash_board][position_other] += 1.5 * self.value_rate
+
                 # 胜利则奖励所有状态行动
                 if is_win:
-                    self.chess_dict[hash_board][self.state_list[i]["operate"]] += 0.4 * self.value_rate
+                    self.chess_dict[hash_board][self.state_list[i]["operate"]] += 1 * self.value_rate * (0.4 ** (len(self.state_list) - step))
 
     def reset_state_list(self):
         self.state_list = []
@@ -159,8 +209,10 @@ class Player:
             # 从价值表里取最高价值的
             if table_hash in self.chess_dict:
                 filtered_dict = {k: v for k, v in self.chess_dict[table_hash].items() if k in empty_indices}
-                max_index = max(filtered_dict, key=filtered_dict.get)
-                self.state_list.append({"board": current_board, "operate": max_index})
+                max_index = max(filtered_dict, key=filtered_dict.get)   # 从状态行动价值中选一个价值最高的下一步
+                max_keys = [k for k, v in filtered_dict.items() if v == filtered_dict[max_index]]  # 如果同时有多个最大价值的下一步，则随机选一个
+                selected_key = random.choice(max_keys)
+                self.state_list.append({"board": current_board, "operate": selected_key})
                 return max_index
 
         # 随机取一个
