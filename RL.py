@@ -70,8 +70,8 @@ def Rl(times,debug_mode=False):
         else:
             if debug:
                 print("平局")
-            player1.count_state_list(False, player2.chess)
-            player2.count_state_list(False, player1.chess)
+            player1.count_state_list(None, player2.chess)
+            player2.count_state_list(None, player1.chess)
             game_res["平局"] += 1
         player1.reset_state_list()
         player2.reset_state_list()
